@@ -1,2 +1,6 @@
 # Ignore environment files
 .env
+ingestion/pdf_documents/test_pdf_file.pdf
+.gitignore
+.gitignore
+ingestion/pdf_text.py
