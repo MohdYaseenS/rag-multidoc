@@ -14,7 +14,7 @@ class FaissVectorStore(BaseVectorStore):
     def _get_numeric_id(self, text_id: str) -> int:
         return int(hashlib.md5(text_id.encode()).hexdigest()[:16], 16)
 
-    def add_chunks(self, chunks):
+    def store(self, chunks):
         index = faiss.IndexIDMap(faiss.IndexFlatL2(self.dim))
         vectors = np.array([get_embedding(c["text"]) for c in chunks]).astype("float32")
         ids = [self._get_numeric_id(c["id"]) for c in chunks]

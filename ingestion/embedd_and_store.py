@@ -1,5 +1,5 @@
 import json
-from retrieval.vectorstore import VectorStore
+from retrieval.vector_store import VectorStore
 
 def load_chunks_and_store(path="chunks.json"):
     with open(path, "r") as f:

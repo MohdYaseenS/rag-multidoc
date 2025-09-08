@@ -4,3 +4,7 @@ ingestion/pdf_documents/test_pdf_file.pdf
 .gitignore
 .gitignore
 ingestion/pdf_text.py
+ingestion/__pycache__/chunker.cpython-311.pyc
+instructions.txt
+documentation/generate_docs.py
+documentation/RAG_Project_Workflow_Documentation.pdf
