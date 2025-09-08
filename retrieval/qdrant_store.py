@@ -19,7 +19,7 @@ class QdrantVectorStore(BaseVectorStore):
                 vectors_config=VectorParams(size=self.dim, distance=Distance.COSINE)
             )
 
-    def add_chunks(self, chunks):
+    def store(self, chunks):
         points = [
             PointStruct(
                 id=i,
