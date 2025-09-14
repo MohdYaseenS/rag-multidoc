@@ -2,7 +2,7 @@ import json
 import hashlib
 import numpy as np
 import faiss
-from ingestion.embeddings import get_embedding
+from ingestion.embedding import get_embedding
 from retrieval.base_store import BaseVectorStore
 
 class FaissVectorStore(BaseVectorStore):
@@ -12,7 +12,7 @@ class FaissVectorStore(BaseVectorStore):
         self.map_path = map_path
 
     def _get_numeric_id(self, text_id: str) -> int:
-        return int(hashlib.md5(text_id.encode()).hexdigest()[:16], 16)
+        return int(hashlib.md5(text_id.encode()).hexdigest(), 16) % (2**63 - 1)
 
     def store(self, chunks):
         index = faiss.IndexIDMap(faiss.IndexFlatL2(self.dim))

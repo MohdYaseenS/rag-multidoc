@@ -1,5 +1,5 @@
 import argparse
-from retrieval.vectorstore import VectorStore
+from retrieval.vector_store import VectorStore
 
 def main():
     parser = argparse.ArgumentParser(description="Search FAISS/Qdrant index")
@@ -13,7 +13,11 @@ def main():
     print("\n🔎 Query:", args.query)
     print("Top Results:\n")
     for i, (chunk, score) in enumerate(results, start=1):
-        print(f"{i}. (score={score:.4f}) {chunk[:200]}...\n")  # show preview
+        text = chunk.get("text", "") if isinstance(chunk, dict) else str(chunk)
+        source = chunk.get("source", "unknown") if isinstance(chunk, dict) else "N/A"
+        chunk_num = chunk.get("chunk_number", "N/A") if isinstance(chunk, dict) else "N/A"
+
+        print(f"{i}. (score={score:.4f}) [source={source}, chunk={chunk_num}] {text[:200]}...\n")
 
 if __name__ == "__main__":
     main()

@@ -3,7 +3,7 @@ from typing import List, Dict, Tuple
 
 class BaseVectorStore(ABC):
     @abstractmethod
-    def add_chunks(self, chunks: List[Dict]) -> None:
+    def store(self, chunks: List[Dict]) -> None:
         pass
 
     @abstractmethod

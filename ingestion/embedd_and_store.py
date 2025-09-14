@@ -2,7 +2,7 @@ import json
 from retrieval.vector_store import VectorStore
 
 def load_chunks_and_store(path="chunks.json"):
-    with open(path, "r") as f:
+    with open("chunks.json", "r", encoding="utf-8") as f:
         chunks = json.load(f)
     vs = VectorStore()
     vs.store(chunks)

@@ -1,6 +1,6 @@
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance, PointStruct
-from ingestion.embeddings import get_embedding
+from ingestion.embedding import get_embedding
 from retrieval.base_store import BaseVectorStore
 from api.core.config import settings
 
