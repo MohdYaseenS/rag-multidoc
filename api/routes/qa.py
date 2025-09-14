@@ -1,13 +1,15 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from retrieval.vector_store import VectorStore
+from llm.llm_service import LLMService
 from api.core.config import settings
-from openai import OpenAI
 
 router = APIRouter()
-client = OpenAI(api_key=settings.OPENAI_API_KEY)
-
 vs = VectorStore()
+
+# Initialize LLM service on demand to avoid startup issues
+def get_llm_service():
+    return LLMService()
 
 class AskRequest(BaseModel):
     query: str
@@ -16,34 +18,49 @@ class AskRequest(BaseModel):
 class AskResponse(BaseModel):
     answer: str
     context: list
+    sources: list
 
 @router.post("/ask", response_model=AskResponse)
-def ask(req: AskRequest):
-    # Step 1: retrieve top chunks
-    results = vs.search(req.query, top_k=req.top_k)
-    context_texts = [c["text"] for c, _ in results]
+def ask_question(req: AskRequest):
+    try:
+        # Step 1: Retrieve relevant chunks
+        results = vs.search(req.query, top_k=req.top_k)
+        if not results:
+            raise HTTPException(status_code=404, detail="No relevant documents found")
+        
+        chunks = [chunk for chunk, score in results]
+        scores = [score for chunk, score in results]
+        
+        # Step 2: Generate answer
+        context_texts = [chunk["text"] for chunk in chunks]
+        llm_service = get_llm_service()
+        answer = llm_service.generate_answer(req.query, context_texts)
+        
+        # Step 3: Prepare response
+        sources = []
+        for chunk, score in zip(chunks, scores):
+            sources.append({
+                "score": float(score),
+                "text": chunk["text"][:200] + "..." if len(chunk["text"]) > 200 else chunk["text"],
+                "source": chunk.get("source", "unknown"),
+                "chunk_number": chunk.get("chunk_number", "N/A")
+            })
+        
+        return AskResponse(
+            answer=answer,
+            context=context_texts,
+            sources=sources
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}")
 
-    # Step 2: construct prompt
-    context_str = "\n\n".join(context_texts)
-    prompt = f"""You are a helpful assistant. 
-Use the following context to answer the question.
-
-Context:
-{context_str}
-
-Question: {req.query}
-Answer:"""
-
-    # Step 3: call LLM (GPT-4o-mini here)
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are a helpful AI answering questions based on provided context."},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.2,
-    )
-
-    answer = response.choices[0].message.content
-
-    return AskResponse(answer=answer, context=context_texts)
+@router.get("/health")
+def health_check():
+    llm_service = get_llm_service()
+    return {
+        "status": "healthy", 
+        "vector_db": settings.VECTOR_DB,
+        "llm_provider": settings.LLM_PROVIDER,
+        "llm_available": llm_service.is_available()
+    }

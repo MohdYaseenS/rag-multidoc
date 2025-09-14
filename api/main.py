@@ -1,37 +1,44 @@
 from fastapi import FastAPI
-from api.routes import qa
-from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+from api.routes.qa import router as qa_router
+from api.core.config import settings
 
-from retrieval.search import search_query
-from llm.llm_service import LLMService
+app = FastAPI(
+    title="Multi-Document RAG API",
+    description="A Retrieval Augmented Generation system for multiple documents",
+    version="1.0.0"
+)
 
-app = FastAPI(title="Multi-Doc RAG")
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/")
+def root():
+    return {
+        "message": "Multi-Document RAG API",
+        "status": "running",
+        "vector_db": settings.VECTOR_DB,
+        "embedding_provider": settings.EMBEDDING_PROVIDER
+    }
 
 @app.get("/ping")
 def ping():
-    return {"status": "ok"}
+    return {"status": "ok", "message": "API is working!"}
 
-app.include_router(qa.router, prefix="")
 
-app = FastAPI()
-llm = LLMService(model_name="gpt-4o-mini")
-
-class AskRequest(BaseModel):
-    query: str
-    top_k: int = 3
-
-@app.post("/ask")
-def ask(req: AskRequest):
-    # Step 1: Retrieve top chunks
-    results = search_query(req.query, top_k=req.top_k)
-
-    chunks = [chunk for _, chunk in results]
-
-    # Step 2: Generate answer from LLM
-    answer = llm.generate_answer(req.query, chunks)
-
+@app.get("/health")
+def health_check():
     return {
-        "query": req.query,
-        "answer": answer,
-        "sources": [{"score": score, "preview": chunk[:200]} for score, chunk in results]
+        "status": "healthy", 
+        "vector_db": settings.VECTOR_DB,
+        "llm_provider": settings.LLM_PROVIDER,
     }
+
+# Include routers
+app.include_router(qa_router, prefix="/api/v1", tags=["QA"])
+
