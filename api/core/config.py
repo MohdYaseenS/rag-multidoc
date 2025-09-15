@@ -1,23 +1,20 @@
-from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 import os
 
-load_dotenv()
+
+from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    # Existing settings
-    EMBEDDING_PROVIDER: str = os.getenv("EMBEDDING_PROVIDER", "local")
-    VECTOR_DB: str = os.getenv("VECTOR_DB", "faiss")
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-    QDRANT_HOST: str = os.getenv("QDRANT_HOST", "localhost")
-    QDRANT_PORT: int = int(os.getenv("QDRANT_PORT", "6333"))
-    
-    # Enhanced LLM settings
-    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "huggingface")  # huggingface, openai, mock
-    HUGGINGFACE_API_KEY: str = os.getenv("HUGGINGFACE_API_KEY", "")
-    HUGGINGFACE_MODEL: str = os.getenv("HUGGINGFACE_MODEL", "meta-llama/Llama-2-7b-chat-hf")
-    OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-    
+    EMBEDDING_PROVIDER: str = "local"
+    VECTOR_DB: str = "faiss"
+    OPENAI_API_KEY: str
+    QDRANT_HOST: str = "localhost"
+    QDRANT_PORT: int = 6333
+    LLM_PROVIDER: str = "huggingface"
+    HUGGINGFACE_API_KEY: str = ""
+    HUGGINGFACE_MODEL: str = "meta-llama/Llama-2-7b-chat-hf"
+    OPENAI_MODEL: str = "gpt-4o-mini"
+
     class Config:
         env_file = ".env"
 

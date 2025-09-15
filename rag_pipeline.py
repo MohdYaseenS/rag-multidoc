@@ -1,10 +1,12 @@
 import argparse
 import atexit
 
-from ingestion.pdf_loader import load_pdf
-from ingestion.chunker import chunk_text
-from retrieval.faiss_store import FaissStore
+from ingestion.ingest import process_pdf as load_pdf
+
+from retrieval.faiss_store import FaissVectorStore as FaissStore
 from llm.llm_service import LLMService
+import os
+
 
 
 class RAGPipeline:
@@ -13,14 +15,13 @@ class RAGPipeline:
         all_chunks = []
         for pdf_path in pdf_paths:
             print(f"📄 Loading: {pdf_path}")
-            docs = load_pdf(pdf_path)
-            chunks = chunk_text(docs, chunk_size=500, overlap=50)
+            chunks = load_pdf(pdf_path)
             print(f"✅ Extracted {len(chunks)} chunks from {pdf_path}")
             all_chunks.extend(chunks)
 
         # 2. Embed + store once
         self.store = FaissStore()
-        self.store.add_documents(all_chunks)
+        self.store.store(all_chunks)
         print(f"✅ Stored {len(all_chunks)} chunks in FAISS")
 
         # 3. Setup LLM
@@ -29,27 +30,33 @@ class RAGPipeline:
     def ask(self, query, top_k=3):
         # Retrieve
         retrieved = self.store.search(query, top_k=top_k)
+
         print(f"🔍 Retrieved {len(retrieved)} relevant chunks")
 
-        context = "\n".join([r.page_content for r in retrieved])
+        context = "\n".join(doc['text'] for doc, _ in retrieved)
 
-        # Generate
-        prompt = f"""You are a helpful assistant.
-Use the following context to answer the user query.
-
-Context:
-{context}
-
-Question: {query}
-Answer:"""
-
-        answer = self.llm.generate(prompt)
-        return answer, retrieved
+        answer = self.llm.generate_answer(query, context)
+        return answer
 
     def cleanup(self):
         if hasattr(self.store, "reset"):
             self.store.reset()
             print("🧹 FAISS index cleared from memory.")
+
+        files_to_delete = [
+            "C:\\Users\\YASEEN\\OneDrive\\Desktop\\Projects\\rag-multidoc\\chunks_map.json",
+            "C:\\Users\\YASEEN\\OneDrive\\Desktop\\Projects\\rag-multidoc\\faiss.index"
+        ]
+
+        for file_path in files_to_delete:
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    print(f"🗑️ Deleted: {file_path}")
+                else:
+                    print(f"⚠️ File not found (skipped): {file_path}")
+            except Exception as e:
+                print(f"❌ Error deleting {file_path}: {e}")
 
 
 if __name__ == "__main__":
@@ -67,11 +74,8 @@ if __name__ == "__main__":
         if query.lower() in ["exit", "quit", "q"]:
             break
 
-        answer, sources = pipeline.ask(query, top_k=args.top_k)
+        answer = pipeline.ask(query, top_k=args.top_k)
 
         print("\n==============================")
         print(f"💡 Question: {query}")
         print(f"🤖 Answer: {answer}")
-        print("\n📚 Sources:")
-        for idx, src in enumerate(sources, 1):
-            print(f"[{idx}] {src.metadata.get('source', 'unknown')}, page {src.metadata.get('page', 'N/A')}")
